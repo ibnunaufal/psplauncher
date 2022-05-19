@@ -17,7 +17,6 @@ import android.view.KeyEvent
 import androidx.annotation.RequiresApi
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.GridLayoutManager
-import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -37,8 +36,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        main_layout.background = this.getDrawable(R.drawable.main_bg)
 
         showAll()
 
@@ -139,6 +136,7 @@ class MainActivity : AppCompatActivity() {
         return super.onKeyLongPress(keyCode, event)
     }
 
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     fun showAll(){
         apps = ArrayList()
 
@@ -173,6 +171,9 @@ class MainActivity : AppCompatActivity() {
                         x.activityInfo.packageName.contains("katalisinfostb")){
                     list.add(Menus(x.activityInfo.packageName, x.loadLabel(manager).toString(), x.loadIcon(manager)))
                 }
+                if(x.activityInfo.packageName.contains("vending")){
+                    list.add(Menus(x.activityInfo.packageName, x.loadLabel(manager).toString(), x.loadIcon(manager)))
+                }
 //                else{
 //                    if(x.activityInfo.packageName.contains("android.setting") ||
 //                        x.activityInfo.packageName.contains("tv.settings")){
@@ -191,22 +192,28 @@ class MainActivity : AppCompatActivity() {
                 }else{
                     rvMenus.layoutManager = GridLayoutManager(this, 5)
                 }
+                main_layout.background = this.getDrawable(R.drawable.main_bg_landscape)
+                second_layout.background = this.getDrawable(R.drawable.menu_bg_landscape)
             } else {
                 // In portrait
                 rvMenus.layoutManager = GridLayoutManager(this, 2)
+                main_layout.background = this.getDrawable(R.drawable.main_bg_potrait)
+                second_layout.background = this.getDrawable(R.drawable.menu_bg_potrait)
             }
             Log.d("asdasd", list.toString())
             showRecycler()
-            startDefaultApp()
+//            startDefaultApp()
 
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onResume() {
         super.onResume()
         showAll()
     }
     var startTimer: Runnable = object : Runnable {
+        @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
         override fun run() {
             showAll()
 

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:background="@drawable/main_bg"
+    tools:background="@drawable/main_bg_landscape"
     tools:context=".MainActivity">
     <LinearLayout
         android:id="@+id/main_layout"
@@ -52,13 +52,14 @@
             </LinearLayout>
         </LinearLayout>
         <LinearLayout
+            android:id="@+id/second_layout"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginHorizontal="45dp"
             android:layout_marginVertical="75dp"
             android:paddingHorizontal="25dp"
             android:paddingVertical="10dp"
-            android:background="@drawable/menu_bg"
+            android:background="@drawable/menu_bg_landscape"
             android:gravity="center">
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvMenus"
