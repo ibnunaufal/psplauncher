@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:id="@+id/mainLayout"
     tools:background="@drawable/main_bg_landscape"
     tools:context=".MainActivity">
     <LinearLayout
@@ -33,22 +34,32 @@
                     android:id="@+id/wifi"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Terhubung"
-                    android:textColor="#00ff00"
+                    android:text="-"
+                    android:textColor="#000"
+                    android:textStyle="bold"
                     android:textSize="30sp"
-                    tools:text="Terhubung"/>
+                    tools:textSize="16sp"
+                    tools:text="-"/>
             </LinearLayout>
             <LinearLayout
                 android:layout_weight="1"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
+                <Button
+                    android:id="@+id/btn_test"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="test"/>
                 <TextClock
+                    android:id="@+id/txtclock"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="right"
-                    tools:text="12:22:22"
+                    tools:text="dd MMM YYYY12:22:22"
                     android:format24Hour="dd MMM yyyy  HH:mm:ss"
-                    android:textSize="30sp"/>
+                    android:textSize="30sp"
+                    tools:textSize="16sp"/>
             </LinearLayout>
         </LinearLayout>
         <LinearLayout
@@ -65,6 +76,7 @@
                 android:id="@+id/rvMenus"
                 app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                 app:spanCount="1"
+                android:focusable="true"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 tools:listitem="@layout/item_menus" />

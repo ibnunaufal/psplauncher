@@ -37,6 +37,7 @@ class MenuAdapter(val listMenu: ArrayList<Menus>): RecyclerView.Adapter<MenuAdap
             val i: Intent? = context.packageManager.getLaunchIntentForPackage(menu.label)
             context.startActivity(i)
         }
+        holder.itemView.isFocusable = true
         holder.itemView.setOnFocusChangeListener { v, hasFocus ->
             if(hasFocus){
 //                holder.itemView.setBackgroundColor(Color.parseColor("#A8A0A1A3"))

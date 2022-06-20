@@ -13,6 +13,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:focusable="true"
         android:orientation="vertical">
         <ImageView
             android:id="@+id/icon"
@@ -28,6 +29,7 @@
             android:textColor="@color/black"
             android:layout_gravity="center"
             android:layout_marginBottom="5dp"
+            android:textAlignment="center"
             android:layout_marginHorizontal="5dp"
             tools:text="Nama Menu"/>
     </LinearLayout>
