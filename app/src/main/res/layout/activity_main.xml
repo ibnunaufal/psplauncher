@@ -42,15 +42,23 @@
                     tools:text="-"/>
             </LinearLayout>
             <LinearLayout
-                android:layout_weight="1"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center">
                 <Button
                     android:id="@+id/btn_test"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="40dp"
                     android:visibility="gone"
-                    android:text="test"/>
+                    android:gravity="center"
+                    tools:visibility="visible"
+                    android:text="Update Tersedia"/>
+            </LinearLayout>
+            <LinearLayout
+                android:layout_weight="1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
                 <TextClock
                     android:id="@+id/txtclock"
                     android:layout_width="match_parent"
@@ -60,6 +68,7 @@
                     android:format24Hour="dd MMM yyyy  HH:mm:ss"
                     android:textSize="30sp"
                     tools:textSize="16sp"/>
+
             </LinearLayout>
         </LinearLayout>
         <LinearLayout
@@ -82,7 +91,6 @@
                 tools:listitem="@layout/item_menus" />
         </LinearLayout>
     </LinearLayout>
-
 
 <!--    <LinearLayout-->
 <!--        android:id="@+id/list_info"-->

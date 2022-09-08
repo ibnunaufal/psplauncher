@@ -12,8 +12,8 @@ android {
         applicationId "id.co.solusinegeri.psplauncher"
         minSdkVersion 17
         targetSdkVersion 30
-        versionCode 105
-        versionName "0.1.5"
+        versionCode 3
+        versionName "0.0.3"
         multiDexEnabled true
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"

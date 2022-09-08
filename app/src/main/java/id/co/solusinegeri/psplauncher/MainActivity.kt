@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private var list: ArrayList<Menus> = arrayListOf()
 
     var handler = Handler()
+    var apkUrl = "https://github.com/ibnunaufal/stb-launcher/raw/master/psp-launcher.apk"
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,11 +65,15 @@ class MainActivity : AppCompatActivity() {
         showAll()
         Log.d("lifecycle", "oncreate")
         // This apk is taking pagination sample app
-        val apkUrl = "https://github.com/ibnunaufal/stb-launcher/raw/master/psp-launcher.apk"
-        downloadController = DownloadController(this, apkUrl)
+
+
 
         btn_test.setOnClickListener {
-            onAlertDialog(mainLayout)
+//            onAlertDialog(mainLayout)
+            requestStoragePermission()
+        }
+        if(isNetworkAvailable(this)){
+            checkLatestVersion()
         }
 
         getScreenSize()
@@ -78,7 +83,9 @@ class MainActivity : AppCompatActivity() {
         }
         startTimer.run()
         if(savedInstanceState == null){
-            if(getPref() == ""){
+            val temp = getPref()
+            Log.d("start",temp.toString())
+            if(getPref() == "" || getPref() == "false"){
                 startDefaultApp()
             }
         }
@@ -345,7 +352,7 @@ class MainActivity : AppCompatActivity() {
 
     fun checkLatestVersion(){
         val retrofit = Retrofit.Builder()
-            .baseUrl("https://api.dev.katalis.info/")
+            .baseUrl("https://api.katalis.info/")
             .build()
 
         // Create Service
@@ -368,10 +375,18 @@ class MainActivity : AppCompatActivity() {
                     val json = JSONObject(response.body()!!.string())
 
                     Log.d("Pretty Printed JSON :", json.toString())
-                    Log.d("Pretty Printed JSON :", json.getString("id").toString())
+                    Log.d("Pretty Printed JSON :", json.getString("versionCode").toString())
 
                     if(BuildConfig.VERSION_NAME != json.getString("versionCode")){
-                        checkStoragePermission()
+                        btn_test.visibility = View.VISIBLE
+                        Log.d("apk url", apkUrl)
+                        apkUrl = json.getString("msg").toString()
+                        Log.d("apk url", apkUrl)
+                        apkUrl = apkUrl.replace('"','[').replace("[","").replace("]","")
+                            .replace("\\","")
+                        Log.d("apk url", apkUrl)
+                        downloadController = DownloadController(this@MainActivity, apkUrl)
+//                        checkStoragePermission()
                     }
                 } else {
                     Log.e("RETROFIT_ERROR", response.raw().request.url.toString())
