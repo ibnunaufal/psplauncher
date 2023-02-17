@@ -1,42 +1,42 @@
 package id.co.solusinegeri.psplauncher
 
-import android.R.attr
-import android.app.Activity
 import android.app.AlertDialog
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.provider.Settings
+import android.text.Html
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
-import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.EditText
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.google.gson.GsonBuilder
+import id.co.solusinegeri.psplauncher.dialog.DateTimeDialogFragment
+import id.co.solusinegeri.psplauncher.networks.APIService
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import retrofit2.Retrofit
 import java.util.*
-import kotlin.collections.ArrayList
-import id.co.solusinegeri.psplauncher.networks.APIService
-import org.json.JSONObject
-import android.R.attr.x
-import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-import id.co.solusinegeri.psplauncher.dialog.DateTimeDialogFragment
 
 
 class MainActivity : AppCompatActivity() {
@@ -56,6 +56,9 @@ class MainActivity : AppCompatActivity() {
 
     var handler = Handler()
     var apkUrl = "https://github.com/ibnunaufal/stb-launcher/raw/master/psp-launcher.apk"
+    var inputtedApkUrl = ""
+
+//    lateinit var receiver : UninstalledReceiver
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,6 +66,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         showAll()
+
+//        receiver = UninstalledReceiver()
+//        receiver.setActivityHandler(this)
+//        receiver.mainActivity = this
+//        IntentFilter(Intent.ACTION_PACKAGE_REMOVED).also {
+//            registerReceiver(receiver, it)
+//        }
         Log.d("lifecycle", "oncreate")
         // This apk is taking pagination sample app
 
@@ -70,6 +80,7 @@ class MainActivity : AppCompatActivity() {
 
         btn_test.setOnClickListener {
 //            onAlertDialog(mainLayout)
+            inputtedApkUrl = apkUrl
             requestStoragePermission()
         }
         if(isNetworkAvailable(this)){
@@ -89,81 +100,6 @@ class MainActivity : AppCompatActivity() {
                 startDefaultApp()
             }
         }
-//        checkDateTime()
-
-//        list_info.setOnClickListener {
-////            val i: Intent? = packageManager.getLaunchIntentForPackage("id.co.solusinegeri.katalisinfostb")
-////            startActivity(i)
-//            val launchIntent =
-//                packageManager.getLaunchIntentForPackage(appName)
-//            if (launchIntent != null) {
-//                startActivity(launchIntent)
-//            } else {
-//                Toast.makeText(
-//                    this@MainActivity,
-//                    "There is no package available in android",
-//                    Toast.LENGTH_LONG
-//                ).show()
-//            }
-//        }
-//        list_info.setOnFocusChangeListener { v, hasFocus ->
-//            if(hasFocus){
-//                Log.d("hello","info active")
-//                list_info.background = this.getDrawable(R.drawable.active)
-//                list_info.setBackgroundColor(Color.parseColor("#ffffff"));
-//            }else{
-//                Log.d("hello","info inactive")
-//                list_info.background = this.getDrawable(R.drawable.inactivea)
-//            }
-//        }
-//        list_setting.setOnFocusChangeListener { v, hasFocus ->
-//            if(hasFocus){
-//                Log.d("hello","setting active")
-//                list_setting.background = this.getDrawable(R.drawable.active)
-//            }else{
-//                Log.d("hello","setting inactive")
-//                list_setting.background = this.getDrawable(R.drawable.inactivea)
-//            }
-//        }
-//        list_setting.setOnClickListener {
-//            val intent = Intent(Settings.ACTION_SETTINGS)
-//            startActivity(intent)
-//        }
-
-
-//
-//
-//        list_view.onItemClickListener = object : AdapterView.OnItemClickListener {
-//            override fun onItemClick(parent: AdapterView<*>, view: View,
-//                                     position: Int, id: Long) {
-//                // value of item that is clicked
-//                val itemValue = list_view.getItemAtPosition(position) as String
-//                // Toast the values
-//                Log.d("click", apps!![0].label.toString())
-//                Toast.makeText(applicationContext,
-//                    "Position :$position\nItem Value : $itemValue", Toast.LENGTH_LONG)
-//                    .show()
-//            }
-//        }
-
-//        if(isAppInstalled(appName, this)){
-//            Log.d("available", "true")
-//            list_info.visibility = View.VISIBLE
-//            val icon: Drawable = this.packageManager.getApplicationIcon(appName)
-//            val name: String = this.packageManager.getApplicationInfo(appName,0).loadLabel(packageManager).toString()
-//
-//            ic_info.setImageDrawable(icon)
-//
-//            tv_info.text = name
-//
-//        }
-//        else{
-//            Log.d("available", "false")
-//
-//            ic_info.background = this.getDrawable(R.drawable.ic_launcher_foreground)
-//
-//            tv_info.text = "Dummy"
-//        }
     }
 
     fun setPref(bool: String){
@@ -197,12 +133,92 @@ class MainActivity : AppCompatActivity() {
         }
     }
     override fun onKeyLongPress(keyCode: Int, event: KeyEvent?): Boolean {
+        print("longPress $keyCode");
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             println("Back button long pressed")
-            startActivityForResult(Intent(android.provider.Settings.ACTION_SETTINGS), 0);
+            onLongBackPressed()
+//            var ada = false
+//            list.forEach {
+//                if (it.label.contains("katalisinfostb")){
+//                    ada = true
+//                }
+//            }
+//            if (!ada) {
+//                onLongBackPressed()
+//            } else {
+//                startActivityForResult(Intent(android.provider.Settings.ACTION_SETTINGS), 0);
+//            }
             return true
         }
         return super.onKeyLongPress(keyCode, event)
+    }
+
+    fun onLongBackPressed(){
+        val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        builder.setTitle("Aksi")
+
+        builder.setNegativeButton("Batal"){
+                _, _ ->
+        }
+
+        val temp: MutableList<String> = mutableListOf()
+
+        var ada = false
+        list.forEach {
+            if (it.label.contains("katalisinfostb")){
+                ada = true
+            }
+        }
+        if (!ada) {
+            temp.add("Install Absensi")
+        }
+        temp.add("Atur Wifi")
+        temp.add("Atur Waktu dan Tanggal")
+        temp.add("Atur Tampilan (Zoom)")
+        temp.add("Buka Pengaturan Lainnya")
+
+        val devices = temp.toTypedArray()
+        builder.setItems(
+            devices
+        ) { _, which ->
+            if (temp[which].contains("Install Absensi")) {
+                confirmDownload()
+            } else if(temp[which].contains("Wifi")) {
+                startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+            } else if(temp[which].contains("Waktu")) {
+                startActivity(Intent(Settings.ACTION_DATE_SETTINGS))
+            } else if(temp[which].contains("Tampilan")) {
+                startActivityForResult(Intent(android.provider.Settings.ACTION_DISPLAY_SETTINGS), 0);
+//                startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS))
+            } else {
+                startActivity(Intent(Settings.ACTION_SETTINGS));
+            }
+        }
+
+        val dialog = builder.create()
+        dialog.show()
+    }
+
+    fun confirmDownload(){
+        val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        builder.setTitle("Konfirmasi")
+        builder.setMessage("Anda yakin akan mengunduh Absensi")
+
+        builder.setNegativeButton("Batal"){
+                _, _ -> onLongBackPressed()
+        }
+
+        builder.setPositiveButton("Unduh"){
+                _, _ ->
+            downloadController = DownloadController(this@MainActivity)
+            inputtedApkUrl = "https://raw.githubusercontent.com/ibnunaufal/stb-launcher/master/Absensi/Latest/app-debug.apk"
+            checkStoragePermission()
+
+        }
+
+
+        val dialog = builder.create()
+        dialog.show()
     }
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
@@ -282,6 +298,13 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         showAll()
+        checkLatestVersion()
+//        receiver = UninstalledReceiver()
+//        receiver.setActivityHandler(this)
+//        receiver.mainActivity = this
+//        IntentFilter(Intent.ACTION_PACKAGE_FULLY_REMOVED).also {
+//            registerReceiver(receiver, it)
+//        }
         Log.d("lifecycle", "onresume")
 //        isStartOpenDefaultApp = false
     }
@@ -310,7 +333,7 @@ class MainActivity : AppCompatActivity() {
             // Request for camera permission.
             if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // start downloading
-                downloadController.enqueueDownload()
+                downloadController.enqueueDownload(inputtedApkUrl)
             } else {
                 // Permission request was denied.
                 mainLayout.showSnackbar(R.string.storage_permission_denied, Snackbar.LENGTH_SHORT)
@@ -324,11 +347,76 @@ class MainActivity : AppCompatActivity() {
             PackageManager.PERMISSION_GRANTED
         ) {
             // start downloading
-            downloadController.enqueueDownload()
+            downloadController.enqueueDownload(inputtedApkUrl)
         } else {
             // Permission is missing and must be requested.
             requestStoragePermission()
         }
+    }
+
+    fun brCallback(intent: Intent) {
+//        Log.d("BroadcastReceiver", intent.toString())
+//        Log.d("BroadcastReceiver", intent.data.toString())
+//        val url = "https://raw.githubusercontent.com/ibnunaufal/stb-launcher/master/Absensi/Latest/app-debug.apk"
+//        inputtedApkUrl = url
+//        requestStoragePermission()
+    }
+
+    fun confirmDelete(packageName: String){
+        val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        var name = ""
+        list.forEach {
+            if (packageName == it.label){
+                name = it.name
+            }
+        }
+        builder.setTitle("Anda yakin akan melakukan menghapus $name?")
+        builder.setPositiveButton("Ya"){
+                _,_ -> doRemove(packageName)
+        }
+        builder.setNegativeButton("Batal"){
+                _, _ ->
+        }
+
+        val dialog = builder.create()
+        dialog.show()
+    }
+
+    fun doRemove(packageName: String){
+        val intent = Intent(Intent.ACTION_DELETE)
+        intent.data = Uri.parse("package:$packageName")
+        startActivity(intent)
+        showAll()
+    }
+
+    fun openAppDetail(app: String){
+        val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        builder.setTitle("Opsi")
+
+        builder.setNegativeButton("Batal"){
+                _, _ ->
+        }
+
+        val temp: MutableList<String> = mutableListOf()
+
+        if (app.contains("solusinegeri")){
+            temp.add("Hapus Aplikasi")
+        }
+        temp.add("Buka Detail Aplikasi")
+
+        val devices = temp.toTypedArray()
+        builder.setItems(
+            devices
+        ) { _, which ->
+            if (temp[which] == "Hapus Aplikasi") {
+                confirmDelete(app)
+            } else {
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$app")))
+            }
+        }
+
+        val dialog = builder.create()
+        dialog.show()
     }
 
     private fun requestStoragePermission() {
@@ -348,6 +436,36 @@ class MainActivity : AppCompatActivity() {
                 PERMISSION_REQUEST_STORAGE
             )
         }
+    }
+
+    fun addOtherApk(){
+        val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        builder.setTitle("Tambahkan Aplikasi Lain")
+        builder.setMessage(
+            Html.fromHtml("" +
+                "Mohon masukkan url download file:<br>"
+        ))
+
+        val inputEditTextField = EditText(this)
+        inputEditTextField.setTextColor(resources.getColor(R.color.white))
+        builder.setView(inputEditTextField)
+
+        builder.setPositiveButton("Download") { dialog, which ->
+            var url = inputEditTextField.text.toString()
+            Log.d("alerturl", url.toString())
+            if (!url.contains("http") || !url.contains("https")){
+                url = "https://$url"
+            }
+            inputtedApkUrl = url
+//            requestStoragePermission()
+            checkStoragePermission()
+        }
+
+        builder.setNegativeButton("Batal") { dialog, which ->
+
+        }
+
+        builder.show()
     }
 
     fun checkLatestVersion(){
@@ -385,7 +503,7 @@ class MainActivity : AppCompatActivity() {
                         apkUrl = apkUrl.replace('"','[').replace("[","").replace("]","")
                             .replace("\\","")
                         Log.d("apk url", apkUrl)
-                        downloadController = DownloadController(this@MainActivity, apkUrl)
+                        downloadController = DownloadController(this@MainActivity)
 //                        checkStoragePermission()
                     }
                 } else {
@@ -431,6 +549,7 @@ class MainActivity : AppCompatActivity() {
         isStartOpenDefaultApp = false
         setPref("false")
         handler.removeCallbacks(startTimer)
+//        unregisterReceiver(receiver)
     }
 
     override fun onPause() {
@@ -442,7 +561,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        Log.d("lifecycle", "onpause")
+        Log.d("lifecycle", "onStop")
         isStartOpenDefaultApp = false
         handler.removeCallbacks(startTimer)
     }

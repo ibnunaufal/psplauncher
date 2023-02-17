@@ -1,6 +1,7 @@
 package id.co.solusinegeri.psplauncher
 
 import android.app.DownloadManager
+import android.app.ProgressDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -8,19 +9,22 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
 
-class DownloadController(private val context: Context, private val url: String) {
+class DownloadController(private val context: Context) {
     companion object {
+        lateinit var m_progress: ProgressDialog
+        val progressDialog = CustomProgressDialog()
         private const val FILE_NAME = "SampleDownloadApp.apk"
         private const val FILE_BASE_PATH = "file://"
         private const val MIME_TYPE = "application/vnd.android.package-archive"
         private const val PROVIDER_PATH = ".provider"
         private const val APP_INSTALL_PATH = "\"application/vnd.android.package-archive\""
     }
-    fun enqueueDownload() {
+    fun enqueueDownload(url: String) {
         var destination =
             context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).toString() + "/"
         destination += FILE_NAME
@@ -40,6 +44,7 @@ class DownloadController(private val context: Context, private val url: String) 
         downloadManager.enqueue(request)
         Toast.makeText(context, context.getString(R.string.downloading), Toast.LENGTH_LONG)
             .show()
+        progressDialog.show(context,"Mengunduh")
     }
     private fun showInstallOption(
         destination: String,
@@ -51,6 +56,7 @@ class DownloadController(private val context: Context, private val url: String) 
                 context: Context,
                 intent: Intent
             ) {
+                progressDialog.dialog.dismiss()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     val contentUri = FileProvider.getUriForFile(
                         context,

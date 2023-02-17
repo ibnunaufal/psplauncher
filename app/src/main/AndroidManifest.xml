@@ -11,6 +11,8 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+
 
     <application
         android:allowBackup="true"
@@ -46,6 +48,16 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_provider_paths" />
         </provider>
+        <receiver
+            android:name=".UninstalledReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+<!--                <action android:name="android.intent.action.PACKAGE_REMOVED" />-->
+                <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED"/>
+                <data android:scheme="package"/>
+            </intent-filter>
+        </receiver>
     </application>
     <queries>
         <package android:name="id.co.solusinegeri.katalisinfo" />

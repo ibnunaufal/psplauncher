@@ -32,10 +32,31 @@ class MenuAdapter(val listMenu: ArrayList<Menus>): RecyclerView.Adapter<MenuAdap
         val menu = listMenu[position]
         holder.name.text = menu.name
         holder.icon.setImageDrawable(menu.icon)
+
+        holder.itemView.setOnLongClickListener {
+            var context: Context = holder.itemView.context
+            context as MainActivity
+            context.openAppDetail(menu.label)
+            true
+        }
         holder.itemView.setOnClickListener {
-            val context: Context = holder.itemView.context
-            val i: Intent? = context.packageManager.getLaunchIntentForPackage(menu.label)
-            context.startActivity(i)
+            when (menu.name) {
+                "Tambah" -> {
+                    var context: Context = holder.itemView.context
+                    context as MainActivity
+                    context.addOtherApk()
+                }
+                "Hapus" -> {
+                    var context: Context = holder.itemView.context
+                    context as MainActivity
+//                    context.showToRemove()
+                }
+                else -> {
+                    val context: Context = holder.itemView.context
+                    val i: Intent? = context.packageManager.getLaunchIntentForPackage(menu.label)
+                    context.startActivity(i)
+                }
+            }
         }
         holder.itemView.isFocusable = true
         holder.itemView.setOnFocusChangeListener { v, hasFocus ->
