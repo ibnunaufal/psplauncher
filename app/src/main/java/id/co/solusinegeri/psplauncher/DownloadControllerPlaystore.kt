@@ -3,10 +3,7 @@ package id.co.solusinegeri.psplauncher
 import android.app.AlertDialog
 import android.app.DownloadManager
 import android.app.ProgressDialog
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -14,14 +11,15 @@ import android.text.Html
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import java.io.File
 
 
-class DownloadController(private val context: Context) {
+class DownloadControllerPlaystore(private val context: Context) {
     companion object {
         lateinit var m_progress: ProgressDialog
         val progressDialog = CustomProgressDialog()
-//        private const val FILE_NAME = "File.apk"
+        //        private const val FILE_NAME = "File.apk"
         private const val FILE_NAME = "SampleDownloadApp.apk"
         private const val FILE_BASE_PATH = "file://"
         private const val MIME_TYPE = "application/vnd.android.package-archive"
@@ -30,52 +28,32 @@ class DownloadController(private val context: Context) {
     }
     fun enqueueDownload(url: String) {
 //===== Ini buat yang di playstore =================================================================
-//        val file = File(Environment.getExternalStorageDirectory(), "Download")
-//        var destination = file.absolutePath
-//            destination += FILE_NAME
-//        val uri = Uri.fromFile(file)
-//        val tempDest = Environment.DIRECTORY_DOWNLOADS + "/" + FILE_NAME
-//        val file2 = File(
-//            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-//            FILE_NAME
-//        ) // Set Your File Name
-//        Log.i("file2", file2.absolutePath)
-//        if (file2.exists()) {
-//            file2.delete()
-//            Log.i("file2", "deleting ${file2.absolutePath}")
-//        }
-//        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-//        val downloadUri = Uri.parse(url)
-//        val request = DownloadManager.Request(downloadUri)
-//        request.setMimeType(MIME_TYPE)
-//        request.setDescription(context.getString(R.string.downloading))
-//        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, FILE_NAME);
-//        showInstallOption(destination, uri)
-//        // Enqueue a new download and same the referenceId
-//        downloadManager.enqueue(request)
-//        Toast.makeText(context, context.getString(R.string.downloading), Toast.LENGTH_LONG)
-//            .show()
-//====== Ini buat yang di non play store ===========================================================
-        var destination =
-            context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).toString() + "/"
-        destination += FILE_NAME
-        val uri = Uri.parse("$FILE_BASE_PATH$destination")
-        val file = File(destination)
-        if (file.exists()) file.delete()
+        val file = File(Environment.getExternalStorageDirectory(), "Download")
+        var destination = file.absolutePath
+            destination += FILE_NAME
+        val uri = Uri.fromFile(file)
+        val tempDest = Environment.DIRECTORY_DOWNLOADS + "/" + FILE_NAME
+        val file2 = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            FILE_NAME
+        ) // Set Your File Name
+        Log.i("file2", file2.absolutePath)
+        if (file2.exists()) {
+            file2.delete()
+            Log.i("file2", "deleting ${file2.absolutePath}")
+        }
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val downloadUri = Uri.parse(url)
         val request = DownloadManager.Request(downloadUri)
         request.setMimeType(MIME_TYPE)
-//        request.setTitle(context.getString(R.string.title_file_download))
         request.setDescription(context.getString(R.string.downloading))
-        // set destination
-        request.setDestinationUri(uri)
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, FILE_NAME);
         showInstallOption(destination, uri)
         // Enqueue a new download and same the referenceId
         downloadManager.enqueue(request)
         Toast.makeText(context, context.getString(R.string.downloading), Toast.LENGTH_LONG)
             .show()
-//==================================================================================================
+
         progressDialog.show(context,"Mengunduh")
     }
     private fun showInstallOption(
@@ -97,28 +75,32 @@ class DownloadController(private val context: Context) {
                         BuildConfig.APPLICATION_ID + PROVIDER_PATH,
                         File(destination)
                     )
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        context.applicationContext.packageName + ".provider", File(destination)
+                    )
+                    val tempUri = File(Environment.DIRECTORY_DOWNLOADS, FILE_NAME).toUri()
                     val install = Intent(Intent.ACTION_VIEW)
                     install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     install.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     install.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+//                    install.setDataAndType(tempUri, "application/vnd.android.package-archive")
                     install.data = contentUri
-                    context.startActivity(install)
+//                    install.setDataAndType(uriFromFile(context, File(destination)), "application/vnd.android.package-archive")
+
                     Log.d("showInstallOption", install.toString())
                     Log.d("showInstallOptionExtr", install.extras.toString())
                     Log.d("showInstallOptionData", install.data.toString())
-//                    try {
-//                        Log.d("showInstallOption", "try")
-//
-//                    } catch (e: ActivityNotFoundException) {
-//                        e.printStackTrace()
-//                        Log.e("TAG", "Error in opening the file!")
-//                    }
+                    try {
+                        Log.d("showInstallOption", "try")
+//                        context.startActivity(install)
+                    } catch (e: ActivityNotFoundException) {
+                        e.printStackTrace()
+                        Log.e("TAG", "Error in opening the file!")
+                    }
 
 //===== Ini buat yang di playstore =================================================================
-//                    confirmOpenFile()
-//====== Ini buat yang di non play store ===========================================================
-
-//==================================================================================================
+                    confirmOpenFile()
                     context.unregisterReceiver(this)
                     // finish()
                 } else {

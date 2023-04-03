@@ -6,6 +6,6 @@ import retrofit2.http.GET
 
 interface APIService {
 
-    @GET("main_a/info/info_versi_mobile/id.co.solusinegeri.psplauncher")
+    @GET("main_a/info/google-play/id.co.solusinegeri.psplauncher")
     suspend fun getVersi(): Response<ResponseBody>
 }

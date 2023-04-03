@@ -5,7 +5,6 @@ import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
@@ -50,7 +49,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val PERMISSION_REQUEST_STORAGE = 0
     }
-    lateinit var downloadController: DownloadController
+    lateinit var downloadController: DownloadControllerPlaystore
 
     private var list: ArrayList<Menus> = arrayListOf()
 
@@ -67,6 +66,7 @@ class MainActivity : AppCompatActivity() {
 
         showAll()
 
+        txt_version.text = "v${BuildConfig.VERSION_NAME}"
 //        receiver = UninstalledReceiver()
 //        receiver.setActivityHandler(this)
 //        receiver.mainActivity = this
@@ -81,7 +81,8 @@ class MainActivity : AppCompatActivity() {
         btn_test.setOnClickListener {
 //            onAlertDialog(mainLayout)
             inputtedApkUrl = apkUrl
-            requestStoragePermission()
+//            requestStoragePermission()
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
         }
         if(isNetworkAvailable(this)){
             checkLatestVersion()
@@ -90,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         getScreenSize()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            showLauncherSelection()
+//            showLauncherSelection()
         }
         startTimer.run()
         if(savedInstanceState == null){
@@ -153,6 +154,7 @@ class MainActivity : AppCompatActivity() {
         return super.onKeyLongPress(keyCode, event)
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     fun onLongBackPressed(){
         val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
         builder.setTitle("Aksi")
@@ -162,6 +164,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         val temp: MutableList<String> = mutableListOf()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = this.getSystemService(Context.ROLE_SERVICE)
+                    as RoleManager
+            if (roleManager.isRoleAvailable(RoleManager.ROLE_HOME) &&
+                !roleManager.isRoleHeld(RoleManager.ROLE_HOME)
+            ){
+                temp.add("Atur PSP Launcher sebagai default")
+            }
+        }
 
         var ada = false
         list.forEach {
@@ -170,7 +181,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
         if (!ada) {
-            temp.add("Install Absensi")
+            if (checkIsTelevision()){
+                temp.add("Install Absensi")
+            }
         }
         temp.add("Atur Wifi")
         temp.add("Atur Waktu dan Tanggal")
@@ -190,6 +203,8 @@ class MainActivity : AppCompatActivity() {
             } else if(temp[which].contains("Tampilan")) {
                 startActivityForResult(Intent(android.provider.Settings.ACTION_DISPLAY_SETTINGS), 0);
 //                startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS))
+            } else if(temp[which].contains("Launcher")) {
+                showLauncherSelection()
             } else {
                 startActivity(Intent(Settings.ACTION_SETTINGS));
             }
@@ -210,7 +225,7 @@ class MainActivity : AppCompatActivity() {
 
         builder.setPositiveButton("Unduh"){
                 _, _ ->
-            downloadController = DownloadController(this@MainActivity)
+            downloadController = DownloadControllerPlaystore(this@MainActivity)
             inputtedApkUrl = "https://raw.githubusercontent.com/ibnunaufal/stb-launcher/master/Absensi/Latest/app-debug.apk"
             checkStoragePermission()
 
@@ -298,7 +313,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         showAll()
-        checkLatestVersion()
+        if(isNetworkAvailable(this)){
+            checkLatestVersion()
+        }
 //        receiver = UninstalledReceiver()
 //        receiver.setActivityHandler(this)
 //        receiver.mainActivity = this
@@ -493,17 +510,17 @@ class MainActivity : AppCompatActivity() {
                     val json = JSONObject(response.body()!!.string())
 
                     Log.d("Pretty Printed JSON :", json.toString())
-                    Log.d("Pretty Printed JSON :", json.getString("versionCode").toString())
+                    Log.d("Pretty Printed JSON :", json.getString("version").toString())
 
-                    if(BuildConfig.VERSION_NAME != json.getString("versionCode")){
+                    if(BuildConfig.VERSION_NAME != json.getString("version")){
                         btn_test.visibility = View.VISIBLE
                         Log.d("apk url", apkUrl)
-                        apkUrl = json.getString("msg").toString()
-                        Log.d("apk url", apkUrl)
-                        apkUrl = apkUrl.replace('"','[').replace("[","").replace("]","")
-                            .replace("\\","")
-                        Log.d("apk url", apkUrl)
-                        downloadController = DownloadController(this@MainActivity)
+//                        apkUrl = json.getString("msg").toString()
+//                        Log.d("apk url", apkUrl)
+//                        apkUrl = apkUrl.replace('"','[').replace("[","").replace("]","")
+//                            .replace("\\","")
+//                        Log.d("apk url", apkUrl)
+//                        downloadController = DownloadControllerPlaystore(this@MainActivity)
 //                        checkStoragePermission()
                     }
                 } else {
@@ -593,6 +610,11 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
+    private fun checkIsTelevision(): Boolean {
+        val uiMode: Int = resources.configuration.uiMode
+        return uiMode and Configuration.UI_MODE_TYPE_MASK == Configuration.UI_MODE_TYPE_TELEVISION
+    }
+
     fun isAppInstalled(appName: String, context: Context): Boolean {
         return try {
             val packageManager = context.packageManager
@@ -637,13 +659,23 @@ class MainActivity : AppCompatActivity() {
     // dialog set default launcher app
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun showLauncherSelection() {
-        val roleManager = this.getSystemService(Context.ROLE_SERVICE)
-                as RoleManager
-        if (roleManager.isRoleAvailable(RoleManager.ROLE_HOME) &&
-            !roleManager.isRoleHeld(RoleManager.ROLE_HOME)
-        ) {
-            val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)
-            startActivityForResult(intent,0)
-        }
+        Log.d("showLauncherSelection", "called")
+
+        startActivityForResult(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS), 0);
+//        this.startactivity
+//        if (requestCode !== -1) act.startActivityForResult(
+//            intent,
+//            requestCode
+//        ) else act.startActivity(intent)
+//        val roleManager = this.getSystemService(Context.ROLE_SERVICE)
+//                as RoleManager
+//        if (roleManager.isRoleAvailable(RoleManager.ROLE_HOME) &&
+//            !roleManager.isRoleHeld(RoleManager.ROLE_HOME)
+//        ) {
+//            Log.d("showLauncherSelection", "not set as default")
+////            SetDefaultLauncher(this).launchHomeOrClearDefaultsDialog()
+//            val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)
+//            startActivityForResult(intent,0)
+//        }
     }
 }
