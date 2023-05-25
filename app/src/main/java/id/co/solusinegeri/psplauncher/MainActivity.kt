@@ -93,7 +93,6 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 //            showLauncherSelection()
         }
-        startTimer.run()
         if(savedInstanceState == null){
             val temp = getPref()
             Log.d("start",temp.toString())
@@ -313,6 +312,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         showAll()
+        startTimer.run()
         if(isNetworkAvailable(this)){
             checkLatestVersion()
         }
