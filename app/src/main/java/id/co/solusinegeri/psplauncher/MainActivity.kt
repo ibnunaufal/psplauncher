@@ -1,10 +1,12 @@
 package id.co.solusinegeri.psplauncher
 
 import android.app.AlertDialog
+import android.app.UiModeManager
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+import android.content.IntentSender.SendIntentException
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
@@ -29,10 +31,7 @@ import com.google.gson.GsonBuilder
 import id.co.solusinegeri.psplauncher.dialog.DateTimeDialogFragment
 import id.co.solusinegeri.psplauncher.networks.APIService
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.json.JSONObject
 import retrofit2.Retrofit
 import java.util.*
@@ -56,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     var handler = Handler()
     var apkUrl = "https://github.com/ibnunaufal/stb-launcher/raw/master/psp-launcher.apk"
     var inputtedApkUrl = ""
+    var wifiJob: Job? = null
 
 //    lateinit var receiver : UninstalledReceiver
 
@@ -66,7 +66,7 @@ class MainActivity : AppCompatActivity() {
 
         showAll()
 
-        txt_version.text = "v${BuildConfig.VERSION_NAME}"
+        txt_version.text = "versi ${BuildConfig.VERSION_NAME}"
 //        receiver = UninstalledReceiver()
 //        receiver.setActivityHandler(this)
 //        receiver.mainActivity = this
@@ -84,8 +84,15 @@ class MainActivity : AppCompatActivity() {
 //            requestStoragePermission()
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
         }
-        if(isNetworkAvailable(this)){
-            checkLatestVersion()
+
+        btn_test.setOnFocusChangeListener { _, b ->
+            if (b){
+                btn_test.background = resources.getDrawable(R.drawable.btn_active)
+//                btn_test.setTextColor(resources.getColor(R.color.white))
+            } else {
+                btn_test.background = resources.getDrawable(R.drawable.btn_outline)
+//                btn_test.setTextColor(resources.getColor(R.color.black))
+            }
         }
 
         getScreenSize()
@@ -153,7 +160,7 @@ class MainActivity : AppCompatActivity() {
         return super.onKeyLongPress(keyCode, event)
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
+
     fun onLongBackPressed(){
         val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
         builder.setTitle("Aksi")
@@ -163,12 +170,21 @@ class MainActivity : AppCompatActivity() {
         }
 
         val temp: MutableList<String> = mutableListOf()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = this.getSystemService(Context.ROLE_SERVICE)
-                    as RoleManager
-            if (roleManager.isRoleAvailable(RoleManager.ROLE_HOME) &&
-                !roleManager.isRoleHeld(RoleManager.ROLE_HOME)
-            ){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            val roleManager = this.getSystemService(Context.ROLE_SERVICE)
+//                    as RoleManager
+//            if (roleManager.isRoleAvailable(RoleManager.ROLE_HOME) &&
+//                !roleManager.isRoleHeld(RoleManager.ROLE_HOME)
+//            ){
+            val packageManager = this.packageManager
+            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+            }
+
+            val resolveInfo = packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            val defaultLauncherPackageName = resolveInfo?.activityInfo?.packageName
+
+            if (defaultLauncherPackageName != null && defaultLauncherPackageName != packageName) {
                 temp.add("Atur PSP Launcher sebagai default")
             }
         }
@@ -224,9 +240,14 @@ class MainActivity : AppCompatActivity() {
 
         builder.setPositiveButton("Unduh"){
                 _, _ ->
-            downloadController = DownloadControllerPlaystore(this@MainActivity)
-            inputtedApkUrl = "https://raw.githubusercontent.com/ibnunaufal/stb-launcher/master/Absensi/Latest/app-debug.apk"
-            checkStoragePermission()
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("http://play.google.com/store/apps/details?id=id.co.solusinegeri.katalisinfostb")
+                setPackage("com.android.vending")
+            }
+            startActivity(intent)
+//            downloadController = DownloadControllerPlaystore(this@MainActivity)
+//            inputtedApkUrl = "https://raw.githubusercontent.com/ibnunaufal/stb-launcher/master/Absensi/Latest/app-debug.apk"
+//            checkStoragePermission()
 
         }
 
@@ -302,6 +323,11 @@ class MainActivity : AppCompatActivity() {
                 second_layout.background = this.getDrawable(R.drawable.menu_bg_potrait)
             }
             Log.d("asdasd", list.toString())
+            rvMenus.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
+//            rvMenus.viewTreeObserver.addOnGlobalLayoutListener {
+//                rvMenus.layoutManager?.scrollToPosition(0)
+//
+//            }
             showRecycler()
 //            startDefaultApp()
 
@@ -312,7 +338,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         showAll()
-        startTimer.run()
+//        startTimer.run()
+        startWifiCoroutine()
         if(isNetworkAvailable(this)){
             checkLatestVersion()
         }
@@ -325,11 +352,41 @@ class MainActivity : AppCompatActivity() {
         Log.d("lifecycle", "onresume")
 //        isStartOpenDefaultApp = false
     }
-    var startTimer: Runnable = object : Runnable {
-        @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-        override fun run() {
-//            showAll()
+//    var startTimer: Runnable = object : Runnable {
+//        @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+//        override fun run() {
+////            showAll()
+//
+//            if (isNetworkAvailable(this@MainActivity)){
+//                wifi.text = "Terhubung"
+//                wifi.setTextColor(Color.parseColor("#00ff00"))
+//            }else{
+//                wifi.text = "Tidak Ada Jaringan"
+//                wifi.setTextColor(Color.parseColor("#ff0000"))
+//            }
+//            handler.postDelayed(this, 1000)//1 sec delay
+//        }
+//    }
+    val coroutineScope = CoroutineScope(Dispatchers.Main)
 
+    fun startWifiCoroutine() {
+        // Ensure that there's no existing coroutine running
+        stopWifiCoroutine()
+        // Start the new coroutine
+        wifiJob = coroutineScope.launch {
+            updateWifiText()
+        }
+    }
+
+    fun stopWifiCoroutine() {
+        // Cancel the job if it's not null
+        wifiJob?.cancel()
+        wifiJob = null
+    }
+
+    suspend fun updateWifiText() {
+        while (true) {
+            // Update the wifi.text value
             if (isNetworkAvailable(this@MainActivity)){
                 wifi.text = "Terhubung"
                 wifi.setTextColor(Color.parseColor("#00ff00"))
@@ -337,7 +394,8 @@ class MainActivity : AppCompatActivity() {
                 wifi.text = "Tidak Ada Jaringan"
                 wifi.setTextColor(Color.parseColor("#ff0000"))
             }
-            handler.postDelayed(this, 1000)//1 sec delay
+            // Delay for 5 seconds
+            delay(3000)
         }
     }
 
@@ -565,7 +623,8 @@ class MainActivity : AppCompatActivity() {
         Log.d("lifecycle", "ondestroy")
         isStartOpenDefaultApp = false
         setPref("false")
-        handler.removeCallbacks(startTimer)
+        stopWifiCoroutine()
+//        handler.removeCallbacks(startTimer)
 //        unregisterReceiver(receiver)
     }
 
@@ -573,14 +632,15 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         Log.d("lifecycle", "onpause")
         isStartOpenDefaultApp = false
-        handler.removeCallbacks(startTimer)
+        stopWifiCoroutine()
+//        handler.removeCallbacks(startTimer)
     }
 
     override fun onStop() {
         super.onStop()
         Log.d("lifecycle", "onStop")
         isStartOpenDefaultApp = false
-        handler.removeCallbacks(startTimer)
+//        handler.removeCallbacks(startTimer)
     }
 
     private fun isNetworkAvailable(context: Context?): Boolean {
@@ -627,6 +687,40 @@ class MainActivity : AppCompatActivity() {
 
     override fun onBackPressed() {
         // do nothing
+        val june12 = Calendar.getInstance()
+        june12.set(2023, Calendar.JUNE, 12, 0, 0, 0)
+        val currentDate = Calendar.getInstance()
+
+        if (currentDate.before(june12)){
+            super.onBackPressed()
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val packageManager = this.packageManager
+            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+            }
+
+            val resolveInfo = packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            val defaultLauncherPackageName = resolveInfo?.activityInfo?.packageName
+
+            if (defaultLauncherPackageName != null && defaultLauncherPackageName != packageName) {
+                // PSP Launcher is not set as the default launcher
+                val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                builder.setTitle("Peringatan")
+                builder.setMessage("PSP Launcher belum diatur menjadi Launcher default")
+                builder.setPositiveButton("Atur Default") { _, _ ->
+                    showLauncherSelection()
+                }
+                builder.setNegativeButton("Nanti") { _, _ ->
+//                    super.onBackPressed()
+                }
+
+                val dialog = builder.create()
+                dialog.show()
+            }
+        }
     }
 
     fun loadApps(){
@@ -656,12 +750,52 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    private fun isAndroidTV(): Boolean {
+        val uiModeManager = getSystemService(UI_MODE_SERVICE) as UiModeManager
+        return uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+    }
     // dialog set default launcher app
-    @RequiresApi(Build.VERSION_CODES.Q)
+//    @RequiresApi(Build.VERSION_CODES.Q)
     private fun showLauncherSelection() {
         Log.d("showLauncherSelection", "called")
+        val settingsIntent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (settingsIntent.resolveActivity(packageManager) != null) {
+                Log.d("showLauncherSelection", "${isAndroidTV()}")
+                if (isAndroidTV()) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val roleManager = this.getSystemService(Context.ROLE_SERVICE)
+                                as RoleManager
+                        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)
+                        startActivityForResult(intent,0)
+                        return
+                    }
+                    settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    Log.d("intent", settingsIntent.toString())
+                    startActivity(settingsIntent)
+                } catch (e: SendIntentException){
+                    Log.e("error", e.toString())
+                }
+            } else {
+                // Handle the case when the settings activity is not available
+                // or the device does not support managing default apps
+            }
+        } else {
+            // Handle the case when the device's Android version is below O
+        }
 
-        startActivityForResult(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS), 0);
+//        val settingsIntent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+//        if (settingsIntent.resolveActivity(packageManager) != null) {
+//            Log.d("showLauncherSelection", "null")
+//            startActivity(settingsIntent)
+//        } else {
+//            Log.d("showLauncherSelection", "null")
+//            // Handle the case when the settings activity is not available
+//            // or the device does not support managing default apps
+//        }
+//        startActivityForResult(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS), 0);
 //        this.startactivity
 //        if (requestCode !== -1) act.startActivityForResult(
 //            intent,

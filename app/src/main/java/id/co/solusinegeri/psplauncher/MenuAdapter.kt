@@ -24,6 +24,7 @@ class MenuAdapter(val listMenu: ArrayList<Menus>): RecyclerView.Adapter<MenuAdap
     }
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MenuAdapter.ListViewHolder {
         val view: View = LayoutInflater.from(parent.context).inflate(R.layout.item_menus, parent, false)
+        view.isFocusable = true
         return ListViewHolder(view)
     }
 
